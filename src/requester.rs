@@ -62,6 +62,7 @@ impl Requester {
         &self,
         bpm: f64,
         style: Option<Style>,
+        scale: String,
         time_signature_num: i32,
         time_signature_den: i32,
     ) -> Result<String, String> {
@@ -72,7 +73,7 @@ impl Requester {
         let request = GenerateRequest {
             bpm,
             duration: 128,
-            scale: String::from("hi"), // TODO: set it based on selector
+            scale: scale, // TODO: set it based on selector
             style: style.to_string(),
             time_signature_num,
             time_signature_den,

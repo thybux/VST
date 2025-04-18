@@ -314,6 +314,7 @@ impl Plugin for Harmonia {
                         match self.requester.generate(
                             self.current_tempo,
                             self.selected_style,
+                            String::from("dd"),
                             self.time_sig_numerator,
                             self.time_sig_denominator,
                         ) {
