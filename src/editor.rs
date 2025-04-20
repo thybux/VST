@@ -12,6 +12,8 @@ use crate::ui::style::generate_button::GenerateButton;
 // le button potentiometre
 use crate::ui::style::knob::ParamKnob;
 
+use crate::ui::style::waiting_button::WatingButton;
+
 // pour le background de la page principal
 use crate::ui::style::main_page::MainPage;
 
@@ -31,8 +33,9 @@ pub fn create(
     debug_info: ThreadSafeMap<String, String>,
     _message_sender: mpsc::Sender<crate::Message>,
     main_thread_sender: Sender<MainMessage>,
+    download_available: Arc<std::sync::atomic::AtomicBool>,
 ) -> Option<Box<dyn Editor>> {
-    create_iced_editor::<HarmoniaEditor>(editor_state, (params, debug_info, main_thread_sender))
+    create_iced_editor::<HarmoniaEditor>(editor_state, (params, debug_info, main_thread_sender, download_available))
 }
 
 struct HarmoniaEditor {
@@ -43,11 +46,15 @@ struct HarmoniaEditor {
     // state pour le button de download
     download_state: button::State,
 
+    download_link_available: bool,
+
     debug_info: ThreadSafeMap<String, String>,
 
     // info du button potentiometre
     knob_drag_state: bool,
     knob_last_y: f32,
+
+    download_available: Arc<std::sync::atomic::AtomicBool>,
 
     // state pour le style de la liste dropDown + style selected
     style_state: PickListState<Style>,
@@ -73,141 +80,6 @@ struct HarmoniaEditor {
     download_file_path: Option<String>
 }
 
-impl std::fmt::Display for Style {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Style::AcousticGrand => "Acoustic Grand",
-            Style::BrightAcoustic => "Bright Acoustic",
-            Style::ElectricGrand => "Electric Grand",
-            Style::HonkyTonk => "Honky-Tonk",
-            Style::ElectricPiano1 => "Electric Piano 1",
-            Style::ElectricPiano2 => "Electric Piano 2",
-            Style::Harpsichord => "Harpsichord",
-            Style::Clav => "Clav",
-            Style::Celesta => "Celesta",
-            Style::Glockenspiel => "Glockenspiel",
-            Style::MusicBox => "Music Box",
-            Style::Vibraphone => "Vibraphone",
-            Style::Marimba => "Marimba",
-            Style::Xylophone => "Xylophone",
-            Style::TubularBells => "Tubular Bells",
-            Style::Dulcimer => "Dulcimer",
-            Style::DrawbarOrgan => "Drawbar Organ",
-            Style::PercussiveOrgan => "Percussive Organ",
-            Style::RockOrgan => "Rock Organ",
-            Style::ChurchOrgan => "Church Organ",
-            Style::ReedOrgan => "Reed Organ",
-            Style::Accordion => "Accordion",
-            Style::Harmonica => "Harmonica",
-            Style::TangoAccordion => "Tango Accordion",
-            Style::AcousticGuitarNylon => "Acoustic Guitar(nylon)",
-            Style::AcousticGuitarSteel => "Acoustic Guitar(steel)",
-            Style::ElectricGuitarJazz => "Electric Guitar(jazz)",
-            Style::ElectricGuitarClean => "Electric Guitar(clean)",
-            Style::ElectricGuitarMuted => "Electric Guitar(muted)",
-            Style::OverdrivenGuitar => "Overdriven Guitar",
-            Style::DistortionGuitar => "Distortion Guitar",
-            Style::GuitarHarmonics => "Guitar Harmonics",
-            Style::AcousticBass => "Acoustic Bass",
-            Style::ElectricBassFinger => "Electric Bass(finger)",
-            Style::ElectricBassPick => "Electric Bass(pick)",
-            Style::FretlessBass => "Fretless Bass",
-            Style::SlapBass1 => "Slap Bass 1",
-            Style::SlapBass2 => "Slap Bass 2",
-            Style::SynthBass1 => "Synth Bass 1",
-            Style::SynthBass2 => "Synth Bass 2",
-            Style::Violin => "Violin",
-            Style::Viola => "Viola",
-            Style::Cello => "Cello",
-            Style::Contrabass => "Contrabass",
-            Style::TremoloStrings => "Tremolo Strings",
-            Style::PizzicatoStrings => "Pizzicato Strings",
-            Style::OrchestralHarp => "Orchestral Harp",
-            Style::Timpani => "Timpani",
-            Style::StringEnsemble1 => "String Ensemble 1",
-            Style::StringEnsemble2 => "String Ensemble 2",
-            Style::SynthStrings1 => "SynthStrings 1",
-            Style::SynthStrings2 => "SynthStrings 2",
-            Style::ChoirAahs => "Choir Aahs",
-            Style::VoiceOohs => "Voice Oohs",
-            Style::SynthVoice => "Synth Voice",
-            Style::OrchestraHit => "Orchestra Hit",
-            Style::Trumpet => "Trumpet",
-            Style::Trombone => "Trombone",
-            Style::Tuba => "Tuba",
-            Style::MutedTrumpet => "Muted Trumpet",
-            Style::FrenchHorn => "French Horn",
-            Style::BrassSection => "Brass Section",
-            Style::SynthBrass1 => "SynthBrass 1",
-            Style::SynthBrass2 => "SynthBrass 2",
-            Style::SopranoSax => "Soprano Sax",
-            Style::AltoSax => "Alto Sax",
-            Style::TenorSax => "Tenor Sax",
-            Style::BaritoneSax => "Baritone Sax",
-            Style::Oboe => "Oboe",
-            Style::EnglishHorn => "English Horn",
-            Style::Bassoon => "Bassoon",
-            Style::Clarinet => "Clarinet",
-            Style::Piccolo => "Piccolo",
-            Style::Flute => "Flute",
-            Style::Recorder => "Recorder",
-            Style::PanFlute => "Pan Flute",
-            Style::BlownBottle => "Blown Bottle",
-            Style::Shakuhachi => "Shakuhachi",
-            Style::Whistle => "Whistle",
-            Style::Ocarina => "Ocarina",
-            Style::Lead1Square => "Lead 1 (square)",
-            Style::Lead2Sawtooth => "Lead 2 (sawtooth)",
-            Style::Lead3Calliope => "Lead 3 (calliope)",
-            Style::Lead4Chiff => "Lead 4 (chiff)",
-            Style::Lead5Charang => "Lead 5 (charang)",
-            Style::Lead6Voice => "Lead 6 (voice)",
-            Style::Lead7Fifths => "Lead 7 (fifths)",
-            Style::Lead8BassLead => "Lead 8 (bass+lead)",
-            Style::Pad1NewAge => "Pad 1 (new age)",
-            Style::Pad2Warm => "Pad 2 (warm)",
-            Style::Pad3Polysynth => "Pad 3 (polysynth)",
-            Style::Pad4Choir => "Pad 4 (choir)",
-            Style::Pad5Bowed => "Pad 5 (bowed)",
-            Style::Pad6Metallic => "Pad 6 (metallic)",
-            Style::Pad7Halo => "Pad 7 (halo)",
-            Style::Pad8Sweep => "Pad 8 (sweep)",
-            Style::FX1Rain => "FX 1 (rain)",
-            Style::FX2Soundtrack => "FX 2 (soundtrack)",
-            Style::FX3Crystal => "FX 3 (crystal)",
-            Style::FX4Atmosphere => "FX 4 (atmosphere)",
-            Style::FX5Brightness => "FX 5 (brightness)",
-            Style::FX6Goblins => "FX 6 (goblins)",
-            Style::FX7Echoes => "FX 7 (echoes)",
-            Style::FX8SciFi => "FX 8 (sci-fi)",
-            Style::Sitar => "Sitar",
-            Style::Banjo => "Banjo",
-            Style::Shamisen => "Shamisen",
-            Style::Koto => "Koto",
-            Style::Kalimba => "Kalimba",
-            Style::Bagpipe => "Bagpipe",
-            Style::Fiddle => "Fiddle",
-            Style::Shanai => "Shanai",
-            Style::TinkleBell => "Tinkle Bell",
-            Style::Agogo => "Agogo",
-            Style::SteelDrums => "Steel Drums",
-            Style::Woodblock => "Woodblock",
-            Style::TaikoDrum => "Taiko Drum",
-            Style::MelodicTom => "Melodic Tom",
-            Style::SynthDrum => "Synth Drum",
-            Style::ReverseCymbal => "Reverse Cymbal",
-            Style::GuitarFretNoise => "Guitar Fret Noise",
-            Style::BreathNoise => "Breath Noise",
-            Style::Seashore => "Seashore",
-            Style::BirdTweet => "Bird Tweet",
-            Style::TelephoneRing => "Telephone Ring",
-            Style::Helicopter => "Helicopter",
-            Style::Applause => "Applause",
-            Style::Gunshot => "Gunshot",
-        })
-    }
-}
-
 impl IcedEditor for HarmoniaEditor {
     type Executor = executor::Default;
     type Message = Message;
@@ -215,10 +87,11 @@ impl IcedEditor for HarmoniaEditor {
         Arc<HarmoniaParams>,
         ThreadSafeMap<String, String>,
         Sender<MainMessage>,
+        Arc<std::sync::atomic::AtomicBool>,
     );
 
     fn new(
-        (params, debug_info, main_thread_sender): Self::InitializationFlags,
+        (params, debug_info, main_thread_sender, download_available): Self::InitializationFlags,
         context: Arc<dyn GuiContext>,
     ) -> (Self, Command<Self::Message>) {
         let editor = HarmoniaEditor {
@@ -229,6 +102,7 @@ impl IcedEditor for HarmoniaEditor {
             button_state: button::State::new(),
             download_state: button::State::new(),
             knob_drag_state: false,
+            download_link_available: false,
             knob_last_y: 0.0,
             bpm_knob_drag_state: false,
             bpm_knob_last_y: 0.0,
@@ -236,6 +110,8 @@ impl IcedEditor for HarmoniaEditor {
             time_sig_knob_last_y: 0.0,
             style_state: PickListState::default(),
             selected_style: None,
+
+            download_available,
 
             note_state: PickListState::default(),
             selected_note: None,
@@ -259,6 +135,7 @@ impl IcedEditor for HarmoniaEditor {
         message: Self::Message,
     ) -> Command<Self::Message> {
         match message {
+
             Message::Generate => {
                 println!("Generate button pressed !");
                 let result = self.main_thread_sender.send(MainMessage::Generate);
@@ -276,6 +153,16 @@ impl IcedEditor for HarmoniaEditor {
                 println!("EDITOR: Bouton Download cliqué!");
                 let result = self.main_thread_sender.send(MainMessage::Download);
                 println!("EDITOR: Résultat de l'envoi du message Download: {}", result.is_ok());
+            }
+
+            Message::DownloadLinkAvailableEditor(isAvailable) => {
+                println!("EDITOR: Received DownloadLinkAvailable({})", isAvailable);
+                self.download_link_available = isAvailable;
+                return Command::perform(async {}, |_| Message::RefreshUI);
+            }
+
+            Message::RefreshUI => {
+
             }
 
             Message::SelectNote(note) => {
@@ -495,16 +382,31 @@ impl IcedEditor for HarmoniaEditor {
                             .width(Length::Units(120)),
                         )
                         .push(Space::with_width(Length::Units(20)))
-                        .push(
-                            Button::new(
-                                &mut self.download_state,
-                                Text::new("Download")
-                                    .font(assets::NOTO_SANS_BOLD)
-                                    .horizontal_alignment(alignment::Horizontal::Center),
-                            )
-                            .style(GenerateButton)
-                            .on_press(Message::Download)
-                            .width(Length::Units(120)),
+                        .push({
+                            let element: Element<'_, Message> = if self.download_available.load(std::sync::atomic::Ordering::SeqCst) {
+                                Button::new(
+                                    &mut self.download_state,
+                                    Text::new("Download")
+                                        .font(assets::NOTO_SANS_BOLD)
+                                        .horizontal_alignment(alignment::Horizontal::Center),
+                                )
+                                    .style(GenerateButton)
+                                    .on_press(Message::Download)
+                                    .width(Length::Units(120))
+                                    .into()
+                            }  else {
+                                      Button::new(
+                                          &mut self.download_state,
+                                          Text::new("Waiting...")
+                                              .font(assets::NOTO_SANS_LIGHT)
+                                              .horizontal_alignment(alignment::Horizontal::Center),
+                                      )
+                                          .style(WatingButton)
+                                          .width(Length::Units(120))
+                                          .into()
+                                  };
+                                  element
+                              }
                         )
                         .push(Space::with_width(Length::Fill))
                         .align_items(Alignment::Center),
@@ -569,7 +471,9 @@ pub enum Message {
     SelectMode(Mode),
     SelectNote(Note),
     Generate,
+    RefreshUI,
     SelectStyle(Style),
+    DownloadLinkAvailableEditor(bool),
     ParamUpdate(ParamMessage),
     Download,
     DownloadProgress(u8),
@@ -858,5 +762,141 @@ impl Style {
             127 => Some(Style::Gunshot),
             _ => None,
         }
+    }
+}
+
+
+impl std::fmt::Display for Style {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Style::AcousticGrand => "Acoustic Grand",
+            Style::BrightAcoustic => "Bright Acoustic",
+            Style::ElectricGrand => "Electric Grand",
+            Style::HonkyTonk => "Honky-Tonk",
+            Style::ElectricPiano1 => "Electric Piano 1",
+            Style::ElectricPiano2 => "Electric Piano 2",
+            Style::Harpsichord => "Harpsichord",
+            Style::Clav => "Clav",
+            Style::Celesta => "Celesta",
+            Style::Glockenspiel => "Glockenspiel",
+            Style::MusicBox => "Music Box",
+            Style::Vibraphone => "Vibraphone",
+            Style::Marimba => "Marimba",
+            Style::Xylophone => "Xylophone",
+            Style::TubularBells => "Tubular Bells",
+            Style::Dulcimer => "Dulcimer",
+            Style::DrawbarOrgan => "Drawbar Organ",
+            Style::PercussiveOrgan => "Percussive Organ",
+            Style::RockOrgan => "Rock Organ",
+            Style::ChurchOrgan => "Church Organ",
+            Style::ReedOrgan => "Reed Organ",
+            Style::Accordion => "Accordion",
+            Style::Harmonica => "Harmonica",
+            Style::TangoAccordion => "Tango Accordion",
+            Style::AcousticGuitarNylon => "Acoustic Guitar(nylon)",
+            Style::AcousticGuitarSteel => "Acoustic Guitar(steel)",
+            Style::ElectricGuitarJazz => "Electric Guitar(jazz)",
+            Style::ElectricGuitarClean => "Electric Guitar(clean)",
+            Style::ElectricGuitarMuted => "Electric Guitar(muted)",
+            Style::OverdrivenGuitar => "Overdriven Guitar",
+            Style::DistortionGuitar => "Distortion Guitar",
+            Style::GuitarHarmonics => "Guitar Harmonics",
+            Style::AcousticBass => "Acoustic Bass",
+            Style::ElectricBassFinger => "Electric Bass(finger)",
+            Style::ElectricBassPick => "Electric Bass(pick)",
+            Style::FretlessBass => "Fretless Bass",
+            Style::SlapBass1 => "Slap Bass 1",
+            Style::SlapBass2 => "Slap Bass 2",
+            Style::SynthBass1 => "Synth Bass 1",
+            Style::SynthBass2 => "Synth Bass 2",
+            Style::Violin => "Violin",
+            Style::Viola => "Viola",
+            Style::Cello => "Cello",
+            Style::Contrabass => "Contrabass",
+            Style::TremoloStrings => "Tremolo Strings",
+            Style::PizzicatoStrings => "Pizzicato Strings",
+            Style::OrchestralHarp => "Orchestral Harp",
+            Style::Timpani => "Timpani",
+            Style::StringEnsemble1 => "String Ensemble 1",
+            Style::StringEnsemble2 => "String Ensemble 2",
+            Style::SynthStrings1 => "SynthStrings 1",
+            Style::SynthStrings2 => "SynthStrings 2",
+            Style::ChoirAahs => "Choir Aahs",
+            Style::VoiceOohs => "Voice Oohs",
+            Style::SynthVoice => "Synth Voice",
+            Style::OrchestraHit => "Orchestra Hit",
+            Style::Trumpet => "Trumpet",
+            Style::Trombone => "Trombone",
+            Style::Tuba => "Tuba",
+            Style::MutedTrumpet => "Muted Trumpet",
+            Style::FrenchHorn => "French Horn",
+            Style::BrassSection => "Brass Section",
+            Style::SynthBrass1 => "SynthBrass 1",
+            Style::SynthBrass2 => "SynthBrass 2",
+            Style::SopranoSax => "Soprano Sax",
+            Style::AltoSax => "Alto Sax",
+            Style::TenorSax => "Tenor Sax",
+            Style::BaritoneSax => "Baritone Sax",
+            Style::Oboe => "Oboe",
+            Style::EnglishHorn => "English Horn",
+            Style::Bassoon => "Bassoon",
+            Style::Clarinet => "Clarinet",
+            Style::Piccolo => "Piccolo",
+            Style::Flute => "Flute",
+            Style::Recorder => "Recorder",
+            Style::PanFlute => "Pan Flute",
+            Style::BlownBottle => "Blown Bottle",
+            Style::Shakuhachi => "Shakuhachi",
+            Style::Whistle => "Whistle",
+            Style::Ocarina => "Ocarina",
+            Style::Lead1Square => "Lead 1 (square)",
+            Style::Lead2Sawtooth => "Lead 2 (sawtooth)",
+            Style::Lead3Calliope => "Lead 3 (calliope)",
+            Style::Lead4Chiff => "Lead 4 (chiff)",
+            Style::Lead5Charang => "Lead 5 (charang)",
+            Style::Lead6Voice => "Lead 6 (voice)",
+            Style::Lead7Fifths => "Lead 7 (fifths)",
+            Style::Lead8BassLead => "Lead 8 (bass+lead)",
+            Style::Pad1NewAge => "Pad 1 (new age)",
+            Style::Pad2Warm => "Pad 2 (warm)",
+            Style::Pad3Polysynth => "Pad 3 (polysynth)",
+            Style::Pad4Choir => "Pad 4 (choir)",
+            Style::Pad5Bowed => "Pad 5 (bowed)",
+            Style::Pad6Metallic => "Pad 6 (metallic)",
+            Style::Pad7Halo => "Pad 7 (halo)",
+            Style::Pad8Sweep => "Pad 8 (sweep)",
+            Style::FX1Rain => "FX 1 (rain)",
+            Style::FX2Soundtrack => "FX 2 (soundtrack)",
+            Style::FX3Crystal => "FX 3 (crystal)",
+            Style::FX4Atmosphere => "FX 4 (atmosphere)",
+            Style::FX5Brightness => "FX 5 (brightness)",
+            Style::FX6Goblins => "FX 6 (goblins)",
+            Style::FX7Echoes => "FX 7 (echoes)",
+            Style::FX8SciFi => "FX 8 (sci-fi)",
+            Style::Sitar => "Sitar",
+            Style::Banjo => "Banjo",
+            Style::Shamisen => "Shamisen",
+            Style::Koto => "Koto",
+            Style::Kalimba => "Kalimba",
+            Style::Bagpipe => "Bagpipe",
+            Style::Fiddle => "Fiddle",
+            Style::Shanai => "Shanai",
+            Style::TinkleBell => "Tinkle Bell",
+            Style::Agogo => "Agogo",
+            Style::SteelDrums => "Steel Drums",
+            Style::Woodblock => "Woodblock",
+            Style::TaikoDrum => "Taiko Drum",
+            Style::MelodicTom => "Melodic Tom",
+            Style::SynthDrum => "Synth Drum",
+            Style::ReverseCymbal => "Reverse Cymbal",
+            Style::GuitarFretNoise => "Guitar Fret Noise",
+            Style::BreathNoise => "Breath Noise",
+            Style::Seashore => "Seashore",
+            Style::BirdTweet => "Bird Tweet",
+            Style::TelephoneRing => "Telephone Ring",
+            Style::Helicopter => "Helicopter",
+            Style::Applause => "Applause",
+            Style::Gunshot => "Gunshot",
+        })
     }
 }

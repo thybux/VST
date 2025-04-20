@@ -13,7 +13,7 @@ pub struct Requester {
     client: Client,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct GenerateRequest {
     bpm: f64,
     duration: u32, // not currently used
@@ -66,19 +66,17 @@ impl Requester {
         time_signature_num: i32,
         time_signature_den: i32,
     ) -> Result<String, String> {
-        // TODO: make request threaded ?
-
         let style = style.ok_or("No style selected")?;
 
         let request = GenerateRequest {
             bpm,
             duration: 128,
-            scale: scale, // TODO: set it based on selector
+            scale: scale,
             style: style.to_string(),
             time_signature_num,
             time_signature_den,
         };
-
+        
         let body = serde_json::to_string(&request).map_err(|e| e.to_string())?;
 
         let response = self

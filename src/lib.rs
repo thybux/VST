@@ -57,6 +57,7 @@ pub struct Harmonia {
     ///
     /// This is stored as voltage gain.
     current_tempo: f64,
+    scale: String,
     time_sig_numerator: i32,
     time_sig_denominator: i32,
 
@@ -69,6 +70,9 @@ pub struct Harmonia {
     download_link: Option<String>,
     downloads_folder: Option<PathBuf>,
     debug_info: ThreadSafeMap<String, String>,
+
+    download_available: Arc<std::sync::atomic::AtomicBool>,
+
 
     requester: Requester,
     message_receiver: mpsc::Receiver<Message>,
@@ -93,6 +97,8 @@ struct HarmoniaParams {
     #[id = "bpm"]
     bpm: FloatParam,
 
+    scale: String,
+
     time_signature: EnumParam<TimeSignature>,
 }
 
@@ -104,12 +110,15 @@ impl Default for Harmonia {
 
             current_tempo: 120.0,
             time_sig_numerator: 4,
+            scale: String::from("C#"),
             time_sig_denominator: 0,
             phase: 0.0,
             sample_rate: 44100.0,
             samples_per_beat: 0,
 
             selected_style: None,
+
+            download_available: Arc::new(std::sync::atomic::AtomicBool::new(false)),
 
             download_link: None,
             downloads_folder: None,
@@ -141,6 +150,7 @@ impl Default for HarmoniaParams {
                 },
             )
             .with_unit(" BPM"),
+            scale: String::from("C#"),
             time_signature: EnumParam::new(
                 "Time Signature",
                 TimeSignature::FourFour, // Utilisez une valeur de type TimeSignature comme valeur par défaut
@@ -256,6 +266,7 @@ impl Plugin for Harmonia {
             self.debug_info.clone(),
             self.message_sender.clone(),
             self.message_sender.clone(),
+            self.download_available.clone(),
         )
     }
 
@@ -300,7 +311,7 @@ impl Plugin for Harmonia {
         // Receive messages
         match self.message_receiver.try_recv() {
             Ok(message) => {
-                println!("Just received a message, {:?}", message);
+                println!("Just received a message, {:?} lib.rs", message);
 
                 match message {
 
@@ -314,13 +325,14 @@ impl Plugin for Harmonia {
                         match self.requester.generate(
                             self.current_tempo,
                             self.selected_style,
-                            String::from("dd"),
+                            self.scale.clone(),
                             self.time_sig_numerator,
                             self.time_sig_denominator,
                         ) {
                             Ok(download_link) => {
-
-                                self.download_link = Some(download_link)
+                                self.download_link = Some(download_link);
+                                self.download_available.store(true, std::sync::atomic::Ordering::SeqCst);
+                                let _ = self.message_sender.send(Message::DownloadLinkAvailableEditor(true));
                             },
                             Err(message) => {
                                 self.download_link = None;
@@ -352,7 +364,8 @@ impl Plugin for Harmonia {
                         println!("mode selctionner : {}", mode)
                     }
                     Message::SelectNote(note) => {
-                        println!("note selectionner : {}", note)
+                        println!("note selectionner : {}", note);
+                        self.scale = note.to_string();
                     }
                     Message::ParamUpdate(params) => {
                         println!("paramètre update : {:?}", params)
