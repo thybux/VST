@@ -100,7 +100,7 @@ impl Requester {
             link,
             download_folder.to_str().unwrap()
         );
-        let file_path = download_folder.join("example.mid");
+        let file_path = download_folder.join("sound.mid");
         let sender = self.main_thread_sender.clone();
 
         let requester_clone = self.clone();

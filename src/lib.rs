@@ -1,3 +1,9 @@
+
+// TODO:
+// - faire l'ouverture du dossier a l'emplacement du telechargement
+// - fair la popup au moment du telechargement
+
+
 mod ui;
 use nih_plug::prelude::*;
 use nih_plug_iced::IcedState;
@@ -7,6 +13,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc};
 use thread_safe_map::ThreadSafeMap;
+use open;
 
 // This is a shortened version of the gain example with most comments removed, check out
 // https://github.com/robbert-vdh/nih-plug/blob/master/plugins/examples/gain/src/lib.rs to get
@@ -344,7 +351,7 @@ impl Plugin for Harmonia {
 
                     Message::Download => match &self.download_link {
                         Some(link) => {
-                            println!("download link: {:?}", link);
+                            open::that(self.downloads_folder.as_ref().unwrap()).unwrap();
                             self.requester.download_midi(link.clone(), self.downloads_folder.as_ref().unwrap())
                         }
                         None => {

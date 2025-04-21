@@ -21,7 +21,7 @@ use crate::ui::style::main_page::MainPage;
 use crate::ui::style::pick_list::custom_pick_list;
 
 use nih_plug_iced::widgets::ParamMessage;
-
+ 
 // Makes sense to also define this here, makes it a bit easier to keep track of
 pub(crate) fn default_state() -> Arc<IcedState> {
     IcedState::from_size(600, 400)
@@ -205,9 +205,6 @@ impl IcedEditor for HarmoniaEditor {
         // definition du vecteur de style
         let mut styles = vec![];
         for instrument_id in 0..128 {
-            // Conversion de l'ID d'instrument en variant Style
-            // Cette partie dépend de votre implémentation - vous devrez créer
-            // une fonction qui convertit un ID (0-127) en variant Style correspondant
             if let Some(instrument_style) = Style::from_id(instrument_id) {
                 styles.push(instrument_style);
             }
