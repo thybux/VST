@@ -123,24 +123,21 @@ impl Requester {
         file_path: &PathBuf,
         sender: &mpsc::Sender<MainMessage>,
     ) -> Result<(), Box<dyn Error>> {
-        let _file =
-            fs::File::create(file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+        println!("lien telechager -> {}", link);
+        println!("Téléchargement commencé vers: {}", file_path.display());
 
-        let response = self
-            .client
-            .get(link)
-            .send()
-            .map_err(|e| format!("Failed to download file: {}", e))?;
+        // Obtenir la réponse du serveur
+        let mut response = self.client.get(link).send()?;
 
-        let bytes = response
-            .bytes()
-            .map_err(|e| format!("Failed to read response bytes: {}", e))?;
+        // Créer le fichier
+        let mut file = std::fs::File::create(file_path)?;
 
-        fs::write(file_path, bytes).map_err(|e| format!("Failed to write file: {}", e))?;
+        // Copier les données directement de la réponse vers le fichier
+        std::io::copy(&mut response, &mut file)?;
 
-        sender
-            .send(MainMessage::DownloadProgress(255))
-            .map_err(|e| format!("Failed to send progress message: {}", e))?;
+        println!("Téléchargement terminé: {} octets", file.metadata()?.len());
+
+        sender.send(MainMessage::DownloadProgress(255))?;
 
         Ok(())
     }
@@ -163,6 +160,6 @@ fn generate_unique_filename() -> PathBuf {
         timestamp,
         random_string
     );
-    
+
     filename.into()
 }

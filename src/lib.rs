@@ -244,10 +244,13 @@ impl Plugin for Harmonia {
         self.samples_per_beat = (self.sample_rate * 60.0 / self.current_tempo as f32) as usize;
 
         // Creating the folder containing the generated files
-        let folder = dirs::data_local_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("Harmonia")
-            .join("Downloads");
+        let folder = match dirs::download_dir() {
+            Some(path) => path.join("Harmonia"),
+            None => match dirs::home_dir() {
+                Some(path) => path.join("Downloads").join("Harmonia"),
+                None => PathBuf::from(std::env::current_dir().unwrap_or_default()).join("Downloads"),
+            },
+        };
 
         if let Ok(_) = fs::create_dir_all(&folder) {
             _ = self
