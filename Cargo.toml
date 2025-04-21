@@ -25,6 +25,7 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = [
 
 nih_plug_iced = { git = "https://github.com/robbert-vdh/nih-plug.git" }
 open = "5.0.0"
+rand = "0.8.5"
 
 [profile.release]
 lto = "thin"

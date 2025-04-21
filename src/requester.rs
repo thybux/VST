@@ -6,6 +6,10 @@ use serde_json;
 use std::error::Error;
 use std::{fs, path::PathBuf, sync::mpsc, thread};
 
+use std::time::{SystemTime, UNIX_EPOCH};
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
+
 #[derive(Clone)]
 pub struct Requester {
     api_url: String,
@@ -76,7 +80,7 @@ impl Requester {
             time_signature_num,
             time_signature_den,
         };
-        
+
         let body = serde_json::to_string(&request).map_err(|e| e.to_string())?;
 
         let response = self
@@ -100,7 +104,7 @@ impl Requester {
             link,
             download_folder.to_str().unwrap()
         );
-        let file_path = download_folder.join("sound.mid");
+        let file_path = download_folder.join(generate_unique_filename());
         let sender = self.main_thread_sender.clone();
 
         let requester_clone = self.clone();
@@ -140,4 +144,25 @@ impl Requester {
 
         Ok(())
     }
+}
+
+fn generate_unique_filename() -> PathBuf {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let random_string: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(8)
+        .map(char::from)
+        .collect();
+
+    let filename = format!(
+        "{}_{}.mid",
+        timestamp,
+        random_string
+    );
+    
+    filename.into()
 }

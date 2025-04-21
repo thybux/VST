@@ -21,7 +21,7 @@ use crate::ui::style::main_page::MainPage;
 use crate::ui::style::pick_list::custom_pick_list;
 
 use nih_plug_iced::widgets::ParamMessage;
- 
+
 // Makes sense to also define this here, makes it a bit easier to keep track of
 pub(crate) fn default_state() -> Arc<IcedState> {
     IcedState::from_size(600, 400)
@@ -268,6 +268,7 @@ impl IcedEditor for HarmoniaEditor {
             |selected| selected,
         )
         .map(|selected| Message::SelectMode(selected));
+        
 
         let title = Text::new("Harmonia")
             .font(assets::NOTO_SANS_LIGHT)
@@ -309,9 +310,9 @@ impl IcedEditor for HarmoniaEditor {
                 .label("BPM")
                 .map(Message::ParamUpdate),
             ))
-            .push(Space::with_width(10.into()))
+            .push(Space::with_width(10.into()));
             // Potentiomètre Time Signature
-            .push(Element::<'_, Message>::from(
+            /*.push(Element::<'_, Message>::from(
                 ParamKnob::new(
                     time_sig_param_ptr,
                     &mut self.time_sig_knob_drag_state,
@@ -320,7 +321,7 @@ impl IcedEditor for HarmoniaEditor {
                 .size(60)
                 .label("Time Signature")
                 .map(Message::ParamUpdate),
-            ));
+            ));*/
 
         Container::new(
             Column::new()

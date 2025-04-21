@@ -315,6 +315,9 @@ impl Plugin for Harmonia {
             );
         }
 
+        let time_sig_value = self.params.time_signature.value();
+
+
         // Receive messages
         match self.message_receiver.try_recv() {
             Ok(message) => {
@@ -351,8 +354,8 @@ impl Plugin for Harmonia {
 
                     Message::Download => match &self.download_link {
                         Some(link) => {
+                            self.requester.download_midi(link.clone(), self.downloads_folder.as_ref().unwrap());
                             open::that(self.downloads_folder.as_ref().unwrap()).unwrap();
-                            self.requester.download_midi(link.clone(), self.downloads_folder.as_ref().unwrap())
                         }
                         None => {
                             println!("No download link available");
